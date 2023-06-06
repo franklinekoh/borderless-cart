@@ -9,3 +9,253 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+enum Roles {
+  logistics
+  customer
+  admin
+}
+
+enum Document_types {
+  NIGERIAN_NIN
+  NIGERIAN_INTERNATIONAL_PASSPORT
+  NIGERIAN_PVC
+  NIGERIAN_DRIVERS_LICENSE
+}
+
+enum Status {
+  pending
+  verified
+  rejected
+}
+
+enum NotificationModes {
+  phone
+  email
+}
+
+enum WeightUnit {
+  kg
+  pounds
+}
+
+enum DeliveryStatus {
+  active
+  completed
+}
+
+enum UserAddressType {
+  shipping
+  billing
+}
+
+model User {
+  id Int @default(autoincrement()) @id
+  email String @unique
+  password String
+  first_name String
+  last_name String
+  phone String?
+  bvn String?
+  dob String?
+  disabled Boolean @default(false)
+  role  Roles @default(customer)
+  verified Boolean @default(false)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  deleted_at DateTime?
+  verifications Verification[]
+  SentNotifications Notification[] @relation("SenderNotification")
+  ReceivedNotifications Notification[] @relation("ReceiverNotification")
+  SentChat Chat[] @relation("SenderChat")
+  ReceivedChat Chat[] @relation("ReceiverChat")
+  Goods Good[]
+  CustomeerDelivery CustomerDelivery[]
+  CustomerDeliveryList CustomerDeliveryList[]
+  Address Address[]
+  UserNairaAccount UserNairaAccount[]
+  UserDollarAccount UserDollarAccount[]
+  Cards Card[]
+}
+
+model Address {
+  id Int @default(autoincrement()) @id
+  uuid String @db.Uuid @unique
+  user User @relation(fields: [user_id], references: [id])
+  user_id Int 
+  address String @db.Text
+  city String
+  State String
+  country String
+  zip String
+  address_type UserAddressType
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  deleted_at DateTime?
+}
+
+model Verification {
+  id Int @default(autoincrement()) @id
+  uuid String @db.Uuid @unique
+  user User @relation(fields: [user_id], references: [id])
+  user_id Int 
+  document_type Document_types
+  document_link String @db.Text
+  verified Boolean @default(false)
+  status Status @default(pending)
+  reason_for_rejection String @db.Text
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+
+model Notification {
+  id Int @default(autoincrement()) @id
+  Sender User @relation("SenderNotification", fields: [sender_id], references: [id])
+  Receiver User @relation("ReceiverNotification",fields: [receiver_id], references: [id])
+  sender_id Int
+  receiver_id Int
+  message String @db.Text
+  delivered Boolean @default(false)
+  mode NotificationModes
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+
+model Chat {
+  id Int @default(autoincrement()) @id
+  Sender User @relation("SenderChat", fields: [sender_id], references: [id])
+  Receiver User @relation("ReceiverChat",fields: [receiver_id], references: [id])
+  sender_id Int
+  receiver_id Int
+  message String @db.Text
+  delivered Boolean @default(false)
+  mode NotificationModes
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+
+model Good {
+  id Int @default(autoincrement()) @id
+  description String @db.Text
+  value Float
+  weight Float?
+  weight_unit WeightUnit?
+  Customer User @relation(fields: [customer_delivery_id], references: [id])
+  CustomerDelivery CustomerDelivery[]
+  customer_delivery_id Int
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  deleted_at DateTime?
+}
+
+model DeliveryChoice {
+  id Int @default(autoincrement()) @id
+  name String
+  uuid String
+  DeliveryRates DeliveryRate[]
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  deleted_at DateTime?
+}
+
+model DeliveryRate {
+  id Int @default(autoincrement()) @id
+  delivery_choice_id Int
+  amount Float
+  DeliveryChoice DeliveryChoice @relation(fields: [delivery_choice_id], references: [id])
+  CustomerDelivery CustomerDelivery[]
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  deleted_at DateTime?
+}
+
+model CustomerDeliveryList {
+  id Int @default(autoincrement()) @id
+  name String?
+  image_list_link String? @db.Text
+  value Float?
+  Customer User @relation(fields: [customer_id], references: [id])
+  customer_id Int
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  deleted_at DateTime?
+}
+
+model CustomerDelivery {
+  id Int @default(autoincrement()) @id
+  logistics_id Int
+  Logistcs Good @relation(fields: [logistics_id], references: [id])
+  DeliveryRate DeliveryRate @relation(fields: [delivery_rate_id], references: [id])
+  delivery_rate_id Int
+  Customer User @relation(fields: [customer_id], references: [id])
+  customer_id Int
+  status DeliveryStatus
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  deleted_at DateTime?
+}
+
+// Payment
+enum PaymentAction {
+  credited
+  debited
+}
+model BusinessAccount {
+  id Int @default(autoincrement()) @id
+  amount Float
+  action PaymentAction
+  balance Float
+}
+
+model UserNairaAccount {
+  id Int @default(autoincrement()) @id
+  user_id Int
+  User User @relation(fields: [user_id], references: [id])
+  amount Float
+  action PaymentAction
+  balance Float
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+
+model UserDollarAccount {
+  id Int @default(autoincrement()) @id
+  user_id Int
+  User User @relation(fields: [user_id], references: [id])
+  amount Float
+  action PaymentAction
+  balance Float
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+
+model Card {
+  id Int @default(autoincrement()) @id
+  user_id Int
+  User User @relation(fields: [user_id], references: [id])
+  card_id Int
+  card_type String
+  card_holder_id String
+  cvv String
+  expiry_month String
+  expiry_year String
+  is_active Boolean @default(true)
+  last_4 String
+  live_mode Boolean
+  balance Float
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+
+// Log
+model activityLog {
+  id Int @default(autoincrement()) @id
+  action String
+  table String
+  payload String @db.Text
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+
+
+
