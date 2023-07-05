@@ -8,6 +8,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
 }
 
 enum Roles {
@@ -76,6 +77,7 @@ model User {
   UserNairaAccount UserNairaAccount[]
   UserDollarAccount UserDollarAccount[]
   Cards Card[]
+  ActivityLog activityLog[]
 }
 
 model Address {
@@ -250,6 +252,8 @@ model Card {
 // Log
 model activityLog {
   id Int @default(autoincrement()) @id
+  user_id Int
+  User User @relation(fields: [user_id], references: [id])
   action String
   table String
   payload String @db.Text
